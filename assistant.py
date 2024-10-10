@@ -279,19 +279,32 @@ def display_thread_messages(thread: SenderThread):
 
 def reorganize_sources(message: str) -> str:
     """
-    Extracts sources from the message and moves them to the end.
+    Extracts sources from the message, cleans them up, and moves them to the end.
 
     Args:
     message (str): The original message with inline sources.
 
     Returns:
-    str: The message with sources moved to the end.
+    str: The message with cleaned sources moved to the end.
     """
+    # Extract sources
     sources = re.findall(r"【.*?】", message)
+
+    # Remove sources from the main text
     ans = re.sub(r"【.*?】", '', message)
 
     if sources:
-        ans = ans.strip() + "\n\nReferencias:\n" + "\n".join(sources)
+        # Clean up sources
+        cleaned_sources = []
+        for source in sources:
+            # Remove the opening 【, the number, and the ✕ (cross) character
+            cleaned = re.sub(r"【\d+✕\s*", "[", source)
+            # Replace the closing 】 with ]
+            cleaned = cleaned.replace("】", "]")
+            cleaned_sources.append(cleaned)
+
+        # Append cleaned sources to the end of the message
+        ans = ans.strip() + "\n\nSources:\n" + "\n".join(cleaned_sources)
 
     return ans
 
