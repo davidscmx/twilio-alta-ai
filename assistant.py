@@ -277,6 +277,23 @@ def display_thread_messages(thread: SenderThread):
         print(f"  Content: {message.content}")
         print("")
 
+def reorganize_sources(message: str) -> str:
+    """
+    Extracts sources from the message and moves them to the end.
+
+    Args:
+    message (str): The original message with inline sources.
+
+    Returns:
+    str: The message with sources moved to the end.
+    """
+    sources = re.findall(r"【.*?】", message)
+    ans = re.sub(r"【.*?】", '', message)
+
+    if sources:
+        ans = ans.strip() + "\n\nReferencias:\n" + "\n".join(sources)
+
+    return ans
 
 async def generate_answer(sender_phone_number: str,
                           message: str,
@@ -310,6 +327,8 @@ async def generate_answer(sender_phone_number: str,
             thread.add_message(content=last_ai_message, role="assistant")
             save_user_threads(sender_phone_number, user_threads)
             logger.debug(f"Saved user_threads for {sender_phone_number}")
+
+            last_ai_message = reorganize_sources(last_ai_message)
 
             return last_ai_message, sent_thinking_message
         else:
