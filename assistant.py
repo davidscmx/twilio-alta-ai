@@ -205,7 +205,9 @@ def get_user_threads(sender_phone_number: str, db) -> UserThreads:
     if sender_phone_number not in db:
         logger.info(f"Creating new user threads for {sender_phone_number}")
         user_threads = UserThreads(sender_phone_number)
+        logger.info(f"Created new user threads for {sender_phone_number}")
         db[sender_phone_number] = user_threads
+        logger.info(f"User threads saved to database for {sender_phone_number}")
     else:
         # Retrieve the user_threads from the database
         logger.info(f"Retrieved user threads for {sender_phone_number}")
