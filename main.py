@@ -1,7 +1,7 @@
 import os
 import asyncio
 
-from fastapi import FastAPI, Response, BackgroundTasks
+from fastapi import FastAPI, Response, BackgroundTasks, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from twilio.twiml.messaging_response import MessagingResponse
 from assistant import generate_answer
@@ -39,41 +39,42 @@ def root():
     return {"message": "Hello World!"}
 
 @app.post("/incoming_assistant/")
-async def receive_message(background_tasks: BackgroundTasks, message: MessageSchema):
+async def receive_message(
+    background_tasks: BackgroundTasks,
+    Body: str = Form(..., alias="Body"),
+    From: str = Form(..., alias="From")
+):
     """
     Endpoint to receive incoming messages, acknowledge them immediately,
     and process them in the background.
     """
-    print(f"Message from {message.From}: {message.Body}")
-
+    logger.info(f"Message from {From}: {Body}")
     resp = MessagingResponse()
 
     # Start background task to process the message
-    background_tasks.add_task(process_message, message)
+    background_tasks.add_task(process_message, Body, From)
 
     # Immediately return an empty response to acknowledge receipt
-    # and avoid Twilio's timeout
     response = Response(content=str(resp), media_type="application/xml")
     return response
 
-async def process_message(message: MessageSchema):
+async def process_message(body: str, from_: str):
     """
     Process the message in the background and send the response.
     """
-    phone_number = message.From.removeprefix("whatsapp:")
+    phone_number = from_.removeprefix("whatsapp:")
 
     try:
-        response, sent_thinking_message = await generate_answer(phone_number, message.Body)
+        response, sent_thinking_message = await generate_answer(phone_number, body)
 
-        if response:
+        if response is not None:
             if sent_thinking_message:
                 await asyncio.sleep(1)
-            await send_responses_with_twilio(to=message.From, body=response)
+            await send_responses_with_twilio(to=from_, body=response)
         else:
-            logger.warning(f"Empty response generated for {phone_number}")
-            if not sent_thinking_message:
-                await send_responses_with_twilio(to=message.From, body="I'm sorry, I couldn't generate a response at this time. Please try again later.")
+            logger.error(f"No response generated for {phone_number}")
+            await send_responses_with_twilio(to=from_, body="I'm sorry, I couldn't generate a response at this time. Please try again later.")
 
     except Exception as e:
-        logger.error(f"Error processing message for {phone_number}: {str(e)}")
-        await send_responses_with_twilio(to=message.From, body="I'm sorry, an error occurred while processing your message. Please try again later.")
+        logger.error(f"Error processing message for {phone_number}: {str(e)}", exc_info=True)
+        await send_responses_with_twilio(to=from_, body="I'm sorry, an error occurred while processing your message. Please try again later.")
