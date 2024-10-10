@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 class Message:
@@ -9,6 +10,16 @@ class Message:
     def __repr__(self):
         return f"Message(role={self.role}, content={self.content}, timestamp={self.timestamp})"
 
+    def to_dict(self):
+        return {
+            "role": self.role,
+            "content": self.content,
+            "timestamp": self.timestamp
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['role'], data['content'], data['timestamp'])
 
 class SenderThread:
     def __init__(self, thread_id: str, assistant: str, summary: str = "", messages: list = None):
@@ -30,6 +41,19 @@ class SenderThread:
         """Return the number of messages in the thread."""
         return len(self.messages)
 
+    def to_dict(self):
+        return {
+            "thread_id": self.thread_id,
+            "assistant": self.assistant,
+            "summary": self.summary,
+            "messages": [message.to_dict() for message in self.messages]
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        thread = cls(data['thread_id'], data['assistant'], data['summary'])
+        thread.messages = [Message.from_dict(m) for m in data['messages']]
+        return thread
 
 class UserThreads:
     def __init__(self, sender_phone_number: str):
@@ -37,9 +61,9 @@ class UserThreads:
         self.sender_name = "" # set the name if we know it
         self.threads = []  # List to keep track of multiple threads
 
-    def add_thread(self, thread_id: str, assistant: str, summary: str = ""):
+    def add_thread(self, thread: SenderThread):
         """Add a new thread for the user."""
-        self.threads.append(SenderThread(thread_id, assistant, summary))
+        self.threads.append(thread)
 
     def find_thread(self, thread_id: str):
         """Find a thread by its ID."""
@@ -68,5 +92,19 @@ class UserThreads:
             print(f"Thread ID: {thread.thread_id} - Number of messages: {num_messages}")
             print(f"  User messages: {user_messages} - Assistant messages: {assistant_messages}")
 
+    def to_dict(self):
+        return {
+            "sender_phone_number": self.sender_phone_number,
+            "sender_name": self.sender_name,
+            "threads": [thread.to_dict() for thread in self.threads]
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        user_threads = cls(data['sender_phone_number'])
+        user_threads.sender_name = data['sender_name']
+        user_threads.threads = [SenderThread.from_dict(t) for t in data['threads']]
+        return user_threads
+
     def __repr__(self):
-            return f"UserThreads(sender={self.sender}, threads={self.threads})"
+        return f"UserThreads(sender_phone_number={self.sender_phone_number}, threads={self.threads})"

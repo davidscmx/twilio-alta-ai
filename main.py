@@ -8,7 +8,6 @@ from assistant import generate_answer
 import logging
 
 
-
 from schemas import MessageSchema
 from twilio_utils import send_responses_with_twilio
 
@@ -46,12 +45,14 @@ async def receive_message(background_tasks: BackgroundTasks, message: MessageSch
     and process them in the background.
     """
     print(f"Message from {message.From}: {message.Body}")
+
     resp = MessagingResponse()
 
     # Start background task to process the message
     background_tasks.add_task(process_message, message)
 
     # Immediately return an empty response to acknowledge receipt
+    # and avoid Twilio's timeout
     response = Response(content=str(resp), media_type="application/xml")
     return response
 
@@ -62,7 +63,7 @@ async def process_message(message: MessageSchema):
     phone_number = message.From.removeprefix("whatsapp:")
 
     try:
-        response, sent_thinking_message = await generate_answer(phone_number, message.Body, db)
+        response, sent_thinking_message = await generate_answer(phone_number, message.Body)
 
         if response:
             if sent_thinking_message:

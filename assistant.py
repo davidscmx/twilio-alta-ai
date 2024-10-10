@@ -3,7 +3,7 @@ import json
 import os
 import re
 import sys
-from typing import Any
+from typing import Any, Optional, Tuple
 import openai
 from openai import AsyncOpenAI
 
@@ -19,6 +19,12 @@ from functions.muro_interior import calcular_costo_muro_interior
 from thread_types import UserThreads, SenderThread
 from twilio_utils import send_responses_with_twilio
 
+IS_REPLIT = 'REPLIT_USER' in os.environ
+
+if IS_REPLIT:
+    from replit import db
+else:
+    db = {}
 
 import logging
 logger = logging.getLogger(__name__)
@@ -183,7 +189,10 @@ async def get_or_create_thread_in_openai(user_threads: UserThreads) -> SenderThr
     new_thread = await bclient.threads.create()
     summary = summarize_previous_threads(user_threads)
 
-    new_thread_obj = SenderThread(new_thread.id, "asst_7dELb6O4IjQClbiiQA2EIzME", summary)
+    new_thread_obj = SenderThread(new_thread.id,
+                                  "asst_7dELb6O4IjQClbiiQA2EIzME",
+                                  summary)
+
     user_threads.add_thread(new_thread_obj)
 
     print(f"will create new: {user_threads.find_thread(new_thread.id)}")
@@ -200,19 +209,20 @@ def summarize_previous_threads(user_threads: UserThreads) -> str:
     return " ".join(summaries)
 
 
-def get_user_threads(sender_phone_number: str, db) -> UserThreads:
-    logger.info(f"Getting user threads for {sender_phone_number}")
+def get_user_threads(sender_phone_number: str) -> UserThreads:
     if sender_phone_number not in db:
-        logger.info(f"Creating new user threads for {sender_phone_number}")
+        logger.info(f"Creating new UserThreads object for {sender_phone_number}")
         user_threads = UserThreads(sender_phone_number)
-        logger.info(f"Created new user threads for {sender_phone_number}")
-        db[sender_phone_number] = user_threads
-        logger.info(f"User threads saved to database for {sender_phone_number}")
     else:
-        # Retrieve the user_threads from the database
-        logger.info(f"Retrieved user threads for {sender_phone_number}")
-        user_threads = db[sender_phone_number]
+        logger.info(f"Retrieving UserThreads for {sender_phone_number}")
+        user_threads_dict = json.loads(db[sender_phone_number])
+        user_threads = UserThreads.from_dict(user_threads_dict)
     return user_threads
+
+
+def save_user_threads(sender_phone_number: str, user_threads: UserThreads):
+    logger.info(f"Saving UserThreads for {sender_phone_number}")
+    db[sender_phone_number] = json.dumps(user_threads.to_dict())
 
 
 def extract_last_message_content(response):
@@ -260,28 +270,36 @@ def display_thread_messages(thread: SenderThread):
         print("")
 
 
-async def generate_answer(sender: str, message: str, db) -> tuple[str, bool]:
-    """Generate an answer for the given message."""
+async def generate_answer(sender: str, message: str) -> Tuple[Optional[str], bool]:
     sent_thinking_message = False
     try:
-        # 1. Get all existing threads for the sender
-        user_threads = get_user_threads(sender, db)
-        # 2. Create or get OpenAI existing thread for the sender
+        logger.debug(f"Generating answer for sender {sender} with message: {message}")
+        user_threads = get_user_threads(sender)
+        if user_threads is None:
+            logger.error(f"Failed to retrieve user_threads for sender {sender}")
+            return None, sent_thinking_message
+
+        logger.debug(f"Retrieved user_threads: {user_threads}")
+
         thread = await get_or_create_thread_in_openai(user_threads)
-        # 3. Submit the user's message to the thread
+        if thread is None:
+            logger.error(f"Failed to get or create thread for sender {sender}")
+            return None, sent_thinking_message
+
+        logger.debug(f"Using thread: {thread}")
+
         await submit_message_to_thread(thread, message)
 
-        # 4. Run the thread to process the message
         run, sent_thinking_message = await run_thread(thread, sender)
 
         if run.status == "completed":
-            # 5. Extract the last AI message from the thread
             messages = await client.beta.threads.messages.list(thread_id=thread.thread_id)
             last_ai_message = extract_last_message_content(messages)
-            # 6. Add the AI message to the thread
+            logger.info(f"Generated answer: {last_ai_message}")
+
             thread.add_message(content=last_ai_message, role="assistant")
-            # 7. Save updated user_threads to the database
-            db[sender] = user_threads
+            save_user_threads(sender, user_threads)
+            logger.debug(f"Saved user_threads for {sender}")
 
             return last_ai_message, sent_thinking_message
         else:
@@ -289,21 +307,20 @@ async def generate_answer(sender: str, message: str, db) -> tuple[str, bool]:
             error_message = "I'm sorry, I couldn't complete the task. Please try asking your question again."
             return error_message, sent_thinking_message
 
-    except asyncio.TimeoutError:
-        logger.error("Run timed out")
-        error_message = "I'm sorry, it's taking longer than expected to process your request. Please try asking a simpler question or try again later."
-        return error_message, sent_thinking_message
+    except openai.APIError as e:
+        logger.error(f"OpenAI API error: {str(e)}")
+        return "I'm sorry, there was an issue with the AI service. Please try again later.", sent_thinking_message
 
     except Exception as e:
-        logger.error(f"Error in generate_answer: {str(e)}")
-        error_message = "An unexpected error occurred. Please try again later."
-        return error_message, sent_thinking_message
+        logger.error(f"Error in generate_answer: {str(e)}", exc_info=True)
+        return "An unexpected error occurred. Please try again later.", sent_thinking_message
 
 
-async def simulate_incoming_message(sender: str, message: str, db):
+
+async def simulate_incoming_message(sender: str, message: str):
     logger.info(f"Received message from {sender}: {message}")
     try:
-        response, sent_thinking_message = await generate_answer(sender, message, db)
+        response, sent_thinking_message = await generate_answer(sender, message)
 
 
         print(f"Sender: {sender}")
@@ -334,7 +351,7 @@ async def main():
     ]
 
     # Process messages concurrently
-    tasks = [simulate_incoming_message(sender, message, db) for sender, message in messages]
+    tasks = [simulate_incoming_message(sender, message) for sender, message in messages]
     await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
