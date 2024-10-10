@@ -1,0 +1,26 @@
+{
+    "name": "calcular_costo_muro_durock",
+    "description": "Calcula el costo de materiales para un muro de Durock basado en las dimensiones proporcionadas.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ancho": {
+                "type": "number",
+                "description": "El ancho del muro en metros."
+            },
+            "largo": {
+                "type": "number",
+                "description": "El largo del muro en metros."
+            },
+            "caras": {
+                "type": "integer",
+                "description": "El número de caras del muro (1 o 2)."
+            }
+        },
+        "required": [
+            "ancho",
+            "largo",
+            "caras"
+        ]
+    }
+}

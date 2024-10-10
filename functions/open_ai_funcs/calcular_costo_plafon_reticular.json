@@ -1,0 +1,43 @@
+{
+    "name": "calcular_costo_plafon_reticular",
+    "description": "Calcula el costo de materiales para un techo de (falso) plafón basado en las dimensiones y el tipo de plafón seleccionado.",
+    "strict": false,
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "largo": {
+                "type": "number",
+                "description": "El largo del plafón en metros."
+            },
+            "ancho": {
+                "type": "number",
+                "description": "El ancho del plafón en metros."
+            },
+            "tipo_plafon": {
+                "type": "string",
+                "description": "El tipo de plafón seleccionado.",
+                "enum": [
+                    "Frost 414 0.61m x 0.61m",
+                    "Glaciar 707 0.61m x 0.61m",
+                    "Sandrift 808 0.61m x 0.61m",
+                    "Auratone Fissured 506 0.61m x 0.61m",
+                    "Radar 2202 0.61m x 0.61m",
+                    "Olympia 4221 0.61m x 0.61m LS",
+                    "Eclipse 76775 0.61m x 0.61m",
+                    "Mars LS 86785 0.61m x 0.61m LS",
+                    "Millenia 76705 0.61m x 0.61m LS",
+                    "Radar 2410 0.61m x 1.22m",
+                    "Auratone Fissured 562 0.61m x 1.22m",
+                    "Texturizada Astral / SOLAR 3/8\" x 0.61m x 1.22m",
+                    "Clean Room 56091A 0.61m x 1.22m",
+                    "Placa Tablaroca c/vinil 3270 0.61m x 1.22m"
+                ]
+            }
+        },
+        "required": [
+            "largo",
+            "ancho",
+            "tipo_plafon"
+        ]
+    }
+}

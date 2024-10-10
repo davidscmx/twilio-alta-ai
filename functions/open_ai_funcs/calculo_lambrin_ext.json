@@ -1,0 +1,17 @@
+{
+    "name": "calcular_costo_lambrin_exterior",
+    "description": "Calcula el costo de materiales para el lambrín exterior basado en el área proporcionada.",
+    "strict": false,
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "area": {
+                "type": "number",
+                "description": "El área en metros cuadrados del lambrín exterior a calcular."
+            }
+        },
+        "required": [
+            "area"
+        ]
+    }
+}

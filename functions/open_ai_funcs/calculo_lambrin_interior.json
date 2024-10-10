@@ -1,0 +1,17 @@
+{
+    "name": "calcular_costo_lambrin_interior",
+    "description": "Calcula el costo de materiales para el muro lambrín interior basado en el área proporcionada.",
+    "strict": false,
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "area": {
+                "type": "number",
+                "description": "El área en metros cuadrados del muro lambrín interior a calcular."
+            }
+        },
+        "required": [
+            "area"
+        ]
+    }
+}
