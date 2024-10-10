@@ -69,4 +69,4 @@ class UserThreads:
             print(f"  User messages: {user_messages} - Assistant messages: {assistant_messages}")
 
     def __repr__(self):
-        return f"UserThreads(sender={self.sender}, threads={self.threads})"
+            return f"UserThreads(sender={self.sender}, threads={self.threads})"

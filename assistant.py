@@ -182,13 +182,14 @@ async def get_or_create_thread_in_openai(user_threads: UserThreads) -> SenderThr
     # If no existing thread is found, create a new one
     new_thread = await bclient.threads.create()
     summary = summarize_previous_threads(user_threads)
-    user_threads.add_thread(new_thread.id, "asst_7dELb6O4IjQClbiiQA2EIzME", summary)
+
+    new_thread_obj = SenderThread(new_thread.id, "asst_7dELb6O4IjQClbiiQA2EIzME", summary)
+    user_threads.add_thread(new_thread_obj)
 
     print(f"will create new: {user_threads.find_thread(new_thread.id)}")
     # Summarize previous thread information if needed
-
     # Add the new thread to the user's threads with its summary
-    return user_threads.find_thread(new_thread.id)
+    return new_thread_obj
 
 
 
@@ -200,11 +201,14 @@ def summarize_previous_threads(user_threads: UserThreads) -> str:
 
 
 def get_user_threads(sender_phone_number: str, db) -> UserThreads:
+    logger.info(f"Getting user threads for {sender_phone_number}")
     if sender_phone_number not in db:
-        print("Creating new UserThreads object")
+        logger.info(f"Creating new user threads for {sender_phone_number}")
         user_threads = UserThreads(sender_phone_number)
         db[sender_phone_number] = user_threads
     else:
+        # Retrieve the user_threads from the database
+        logger.info(f"Retrieved user threads for {sender_phone_number}")
         user_threads = db[sender_phone_number]
     return user_threads
 
