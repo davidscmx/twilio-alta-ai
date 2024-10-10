@@ -297,8 +297,8 @@ def reorganize_sources(message: str) -> str:
         # Clean up sources
         cleaned_sources = []
         for source in sources:
-            # Remove the opening 【, the number, and the ✕ (cross) character
-            cleaned = re.sub(r"【\d+✕\s*", "[", source)
+            # Remove the opening 【, the number, and the † (cross) character
+            cleaned = re.sub(r"【\d+†\s*", "[", source)
             # Replace the closing 】 with ]
             cleaned = cleaned.replace("】", "]")
             cleaned_sources.append(cleaned)
