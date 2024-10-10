@@ -76,13 +76,16 @@ def handle_requires_action(tool_call):
     print(f"Tool calculation result: {result}")
     return result
 
-async def run_thread(thread: SenderThread, sender: str) -> tuple[Any, bool]:
+async def run_thread(thread: SenderThread,
+                     sender: str,
+                     profile_name: str) -> tuple[Any, bool]:
     """Process the thread run based on its status."""
     max_retries = 3
     retry_delay = 2  # seconds
     run_timeout = 20  # seconds
     sent_thinking_message = False
 
+    print(f"Running thread with profile name: {profile_name}")
     for attempt in range(max_retries):
         try:
             # Create run
@@ -91,7 +94,12 @@ async def run_thread(thread: SenderThread, sender: str) -> tuple[Any, bool]:
                 assistant_id=thread.assistant,
                 # Forcing file search all the time
                 #tool_choice={"type": "file_search"}
+                additional_instructions=(
+                  f"Menciona el nombre del usuario que es {profile_name} "
+                  f"al inicio de la conversación y al finalizar la respuesta. "
+                  f"Si el nombre esta vacio, no lo menciones."
                 )
+            )
 
             logger.info(f"Run created with ID: {run.id}")
             logger.info(f"Available tools: {run.tools}")  # Log available tools
@@ -270,27 +278,29 @@ def display_thread_messages(thread: SenderThread):
         print("")
 
 
-async def generate_answer(sender: str, message: str) -> Tuple[Optional[str], bool]:
+async def generate_answer(sender_phone_number: str,
+                          message: str,
+                          profile_name: str) -> Tuple[Optional[str], bool]:
     sent_thinking_message = False
     try:
-        logger.debug(f"Generating answer for sender {sender} with message: {message}")
-        user_threads = get_user_threads(sender)
+        logger.debug(f"Generating answer for sender {sender_phone_number} with message: {message}")
+        user_threads = get_user_threads(sender_phone_number)
         if user_threads is None:
-            logger.error(f"Failed to retrieve user_threads for sender {sender}")
+            logger.error(f"Failed to retrieve user_threads for sender {sender_phone_number}")
             return None, sent_thinking_message
 
         logger.debug(f"Retrieved user_threads: {user_threads}")
 
         thread = await get_or_create_thread_in_openai(user_threads)
         if thread is None:
-            logger.error(f"Failed to get or create thread for sender {sender}")
+            logger.error(f"Failed to get or create thread for sender {sender_phone_number}")
             return None, sent_thinking_message
 
         logger.debug(f"Using thread: {thread}")
 
         await submit_message_to_thread(thread, message)
 
-        run, sent_thinking_message = await run_thread(thread, sender)
+        run, sent_thinking_message = await run_thread(thread, sender_phone_number, profile_name)
 
         if run.status == "completed":
             messages = await client.beta.threads.messages.list(thread_id=thread.thread_id)
@@ -298,8 +308,8 @@ async def generate_answer(sender: str, message: str) -> Tuple[Optional[str], boo
             logger.info(f"Generated answer: {last_ai_message}")
 
             thread.add_message(content=last_ai_message, role="assistant")
-            save_user_threads(sender, user_threads)
-            logger.debug(f"Saved user_threads for {sender}")
+            save_user_threads(sender_phone_number, user_threads)
+            logger.debug(f"Saved user_threads for {sender_phone_number}")
 
             return last_ai_message, sent_thinking_message
         else:

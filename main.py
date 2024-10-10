@@ -41,8 +41,9 @@ def root():
 @app.post("/incoming_assistant/")
 async def receive_message(
     background_tasks: BackgroundTasks,
-    Body: str = Form(..., alias="Body"),
-    From: str = Form(..., alias="From")
+    Body: str = Form(...),
+    From: str = Form(...),
+    ProfileName: str = Form(...)
 ):
     """
     Endpoint to receive incoming messages, acknowledge them immediately,
@@ -52,20 +53,20 @@ async def receive_message(
     resp = MessagingResponse()
 
     # Start background task to process the message
-    background_tasks.add_task(process_message, Body, From)
+    background_tasks.add_task(process_message, Body, From, ProfileName)
 
     # Immediately return an empty response to acknowledge receipt
     response = Response(content=str(resp), media_type="application/xml")
     return response
 
-async def process_message(body: str, from_: str):
+async def process_message(body: str, from_: str, profile_name: str):
     """
     Process the message in the background and send the response.
     """
     phone_number = from_.removeprefix("whatsapp:")
 
     try:
-        response, sent_thinking_message = await generate_answer(phone_number, body)
+        response, sent_thinking_message = await generate_answer(phone_number, body, profile_name)
 
         if response is not None:
             if sent_thinking_message:
