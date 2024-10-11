@@ -95,9 +95,9 @@ async def run_thread(thread: SenderThread,
                 # Forcing file search all the time
                 #tool_choice={"type": "file_search"}
                 additional_instructions=(
-                  f"Menciona el nombre del usuario que es {profile_name} "
-                  f"al inicio de la conversación y al finalizar la respuesta. "
-                  f"Si el nombre esta vacio, no lo menciones."
+                  f"Este es el nombre del perfil del usuario: {profile_name} "
+                  f"Menciona solamente el primer nombre, si es que el nombre de perfil contiene nombre(s) y apellido(s)."
+                  f"Si el nombre esta vacio o no se puede determinar, no lo menciones."
                 )
             )
 
